@@ -3,11 +3,7 @@
 
 Usage:
     python build.py                    # just build dist/
-    python build.py --deploy wrangler  # build, upload to Cloudflare Pages if data changed
-    python build.py --deploy git       # build, commit + push dist/ if data changed
-    add --force to deploy even if nothing changed
 """
-import argparse
 import csv
 import hashlib
 import io
@@ -118,26 +114,12 @@ def deploy(method):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--deploy", choices=["wrangler", "git"])
-    ap.add_argument("--force", action="store_true", help="deploy even if data is unchanged")
-    args = ap.parse_args()
-
     print("Downloading sheet...")
     players = parse_blocks(fetch_csv())
     if not players:
         raise SystemExit("No players found, not touching the site.")
     build(players)
     print(f"Built dist/index.html with {len(players)} players")
-
-    if args.deploy:
-        h = data_hash(players)
-        if not args.force and HASH_FILE.exists() and HASH_FILE.read_text().strip() == h:
-            print("Data unchanged, skipping deploy")
-            return
-        deploy(args.deploy)
-        HASH_FILE.write_text(h)
-        print("Deployed")
 
 
 if __name__ == "__main__":
