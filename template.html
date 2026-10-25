@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITLE__ — статистика</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --border:#f6c92b; --screen:#f6eed6; --panel:#fbf6e4; --line:#e3d4a4;
+  --ink:#2e2010; --muted:#6f5128; --prog:#c2410c; --reroll:#8a6200; --other:#6b4a2a;
+  --done:#3f6b1d; --sun1:#ffd23f; --sun2:#ff9a1f; --sun3:#e8541e; --onsun:#2e2010;
+  --head:'Press Start 2P','Courier New',monospace;
+  --body:'IBM Plex Sans','Segoe UI',Arial,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--border);padding:clamp(10px,3vw,36px);font-family:var(--body);color:var(--ink);line-height:1.5}
+.screen{max-width:980px;margin:0 auto;background:var(--screen);padding:clamp(16px,3.5vw,40px);min-height:70vh}
+h1{font-family:var(--head);font-size:clamp(14px,3.2vw,22px);line-height:1.5;margin:0 0 10px;font-weight:400}
+.cursor{display:inline-block;width:.7em;height:1em;background:var(--ink);vertical-align:-.12em;margin-left:.3em;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.cursor{animation:none}}
+.stripes{height:14px;margin:0 0 14px;background:linear-gradient(var(--sun1) 0 33.3%,var(--sun2) 33.3% 66.6%,var(--sun3) 66.6% 100%);max-width:260px}
+.sub{margin:0 0 28px;color:var(--muted);max-width:60ch}
+.player{background:var(--panel);border:2px solid var(--line);margin-bottom:14px}
+.player.open{border-color:var(--border)}
+.head{all:unset;box-sizing:border-box;display:grid;grid-template-columns:auto 1fr auto auto;gap:8px 18px;align-items:center;width:100%;padding:16px 18px;cursor:pointer}
+.head:focus-visible{outline:3px solid var(--sun3);outline-offset:2px}
+.av{width:56px;height:56px;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--sun1);display:grid;place-items:center;font-family:var(--head);font-size:16px;color:var(--onsun);overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+.name{font-family:var(--head);font-size:13px;line-height:1.6;word-break:break-word}
+.tw{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.stats{display:flex;gap:22px;align-items:center}
+.stat b{display:block;font-family:var(--head);font-size:14px;font-weight:400}
+.stat span{font-size:12px;color:var(--muted)}
+.chev{font-family:var(--head);font-size:12px;color:var(--muted);width:1.2em;text-align:center}
+.body{display:none;border-top:2px solid var(--line);padding:14px 18px 18px}
+.player.open .body{display:block}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.chip{font:500 13px var(--body);color:var(--ink);background:transparent;border:2px solid var(--line);padding:5px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--sun1);border-color:var(--sun1);color:var(--onsun)}
+.chip:focus-visible,.tlink:focus-visible{outline:3px solid var(--sun3);outline-offset:2px}
+.tlink{margin-left:auto;font-size:13px;color:var(--ink)}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:6px 10px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.game{font-weight:500}
+.plat{display:inline-block;margin-left:6px;padding:0 6px;font-size:11px;border:1px solid var(--muted);color:var(--muted);vertical-align:1px}
+.free{color:var(--muted);font-style:italic}
+.st{display:inline-block;white-space:nowrap;font-weight:600;font-size:13px}
+.st::before{content:"";display:inline-block;width:9px;height:9px;margin-right:7px;background:currentColor}
+.st.done{color:var(--done)} .st.todo{color:var(--muted)}
+.t-n{width:56px;color:var(--muted)}
+.num{white-space:nowrap}
+.foot{margin-top:26px;font-size:12px;color:var(--muted)}
+@media (max-width:640px){
+  .head{grid-template-columns:auto 1fr auto}
+  .stats{grid-column:1 / -1;order:3;gap:18px}
+  .av{width:48px;height:48px;font-size:14px}
+  thead{display:none}
+  table,tbody,tr,td{display:block;width:100%}
+  tr{padding:10px 0;border-bottom:1px solid var(--line)}
+  td{border:0;padding:2px 0}
+  td[data-l]::before{content:attr(data-l) ": ";color:var(--muted);font-size:12px}
+  td.t-game{font-size:15px;margin:4px 0}
+  td.t-game::before,td.t-st::before{content:none}
+  td.t-n{width:100%;font-size:12px}
+  td.t-n::before{content:"№ "}
+}
+</style>
+</head>
+<body>
+<main class="screen">
+  <h1>__TITLE__<span class="cursor" aria-hidden="true"></span></h1>
+  <div class="stripes" aria-hidden="true"></div>
+  <p class="sub">Кто сколько отрезков прошёл. Нажми на игрока, чтобы увидеть его список.</p>
+  <div id="list"></div>
+  <p class="foot">Данные обновлены: __UPDATED__</p>
+</main>
+<script>
+var PLAYERS = __PLAYERS__;
+var FILTERS=[['all','Все'],['todo','Осталось'],['done','Пройдено']];
+var state={};
+var SUN=['#ffd23f','#ffe58a','#ffb84d'];
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function split(g){var m=g.match(/^(.*?)\s*\(([^)]+)\)\s*$/);return m?{t:m[1],p:m[2]}:{t:g,p:''}}
+function avatar(p,i){
+  if(p.avatar) return '<span class="av"><img src="'+esc(p.avatar)+'" alt=""></span>';
+  return '<span class="av" style="background:'+SUN[i%SUN.length]+'">'+esc(p.name.slice(0,2).toUpperCase())+'</span>';
+}
+function rowsFor(p){
+  var f=state[p.id].filter;
+  return p.rows.filter(function(r){return f==='all'||(f==='done'?r.done:!r.done)}).map(function(r){
+    var g=r.seg?split(r.seg):null;
+    var seg=g?'<span class="game">'+esc(g.t)+'</span>'+(g.p?'<span class="plat">'+esc(g.p)+'</span>':''):'<span class="free">Не выбрано</span>';
+    return '<tr><td class="t-n num">'+r.n+'</td><td class="t-game">'+seg+'</td>'+
+      '<td class="t-st"><span class="st '+(r.done?'done':'todo')+'">'+(r.done?'Пройдено':'Осталось')+'</span></td></tr>';
+  }).join('');
+}
+function render(){
+  document.getElementById('list').innerHTML = PLAYERS.map(function(p,i){
+    var s=state[p.id];
+    var done=p.rows.filter(function(r){return r.done}).length, total=p.rows.length;
+    return '<section class="player'+(s.open?' open':'')+'" id="'+esc(p.id)+'">'+
+      '<button class="head" data-toggle="'+esc(p.id)+'" aria-expanded="'+s.open+'">'+
+        avatar(p,i)+
+        '<span><span class="name">'+esc(p.name)+'</span>'+(p.twitch?'<span class="tw">'+esc(p.twitch.replace(/^https?:\/\/(www\.)?/,''))+'</span>':'')+'</span>'+
+        '<span class="stats"><span class="stat"><b>'+done+'/'+total+'</b><span>пройдено</span></span>'+
+        '<span class="stat"><b>'+(total-done)+'</b><span>осталось</span></span></span>'+
+        '<span class="chev" aria-hidden="true">'+(s.open?'▲':'▼')+'</span>'+
+      '</button>'+
+      '<div class="body"><div class="chips">'+
+        FILTERS.map(function(f){return '<button class="chip" data-filter="'+esc(p.id)+'|'+f[0]+'" aria-pressed="'+(s.filter===f[0])+'">'+f[1]+'</button>'}).join('')+
+        (p.twitch?'<a class="tlink" href="'+esc(p.twitch)+'" target="_blank" rel="noopener">Twitch ↗</a>':'')+'</div>'+
+        '<div class="wrap"><table><thead><tr><th>№</th><th>Отрезок</th><th>Статус</th></tr></thead><tbody>'+rowsFor(p)+'</tbody></table></div>'+
+      '</div></section>';
+  }).join('');
+}
+PLAYERS.forEach(function(p){state[p.id]={open:false,filter:'all'}});
+try{var h=decodeURIComponent((location.hash||'').slice(1)); if(state[h]) state[h].open=true;}catch(e){}
+document.getElementById('list').addEventListener('click',function(e){
+  var t=e.target.closest('[data-toggle]'), f=e.target.closest('[data-filter]');
+  if(t){var id=t.getAttribute('data-toggle'); state[id].open=!state[id].open; render();
+    var el=document.querySelector('[data-toggle="'+id+'"]'); if(el) el.focus();}
+  else if(f){var a=f.getAttribute('data-filter').split('|'); state[a[0]].filter=a[1]; render();
+    var c=document.querySelector('[data-filter="'+a[0]+'|'+a[1]+'"]'); if(c) c.focus();}
+});
+render();
+</script>
+</body>
+</html>
