@@ -99,20 +99,6 @@ def data_hash(players):
     return hashlib.sha256(json.dumps(players, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
-def deploy(method):
-    if method == "wrangler":
-        # needs `npx wrangler login` once, or CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in the env
-        subprocess.run(["npx", "wrangler", "pages", "deploy", str(DIST),
-                        "--project-name", PAGES_PROJECT, "--branch", "main"], check=True)
-    elif method == "git":
-        subprocess.run(["git", "add", "dist"], cwd=ROOT, check=True)
-        if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=ROOT).returncode == 0:
-            print("git: nothing to commit")
-            return
-        subprocess.run(["git", "commit", "-m", "update data"], cwd=ROOT, check=True)
-        subprocess.run(["git", "push"], cwd=ROOT, check=True)
-
-
 def main():
     print("Downloading sheet...")
     players = parse_blocks(fetch_csv())
