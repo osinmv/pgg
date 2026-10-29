@@ -6,6 +6,7 @@ Usage:
 """
 import csv
 import hashlib
+import html
 import io
 import json
 import re
@@ -14,6 +15,7 @@ import subprocess
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote
 
 # ---- settings ---------------------------------------------------------------
 SHEET_ID = "1AfdvWvnwxMeB2dwwA-cG6haao2VBVEgUrzK2YG6hKh4"
@@ -21,6 +23,15 @@ GID = "1686814201"                       # the tab with the players' segment lis
 TITLE = "Retro Game Gauntlet"            # page title
 PAGES_PROJECT = "rgg"                    # Cloudflare Pages project name
 TWITCH = {                               # optional, by exact player name as in the sheet
+          "Диана": "https://www.twitch.tv/dzmukin",
+          "Максим": "https://www.twitch.tv/lightningmcsim",
+          "Фирс": "https://www.twitch.tv/starkey_ru",
+          "Александр": "https://www.twitch.tv/grom1k_",
+          "Алина": "https://www.twitch.tv/l1ghtfury_bae",
+          "Илья": "https://www.twitch.tv/dzmuh",
+          "Элеонора Малая": "https://www.twitch.tv/elliottadderley",
+          "Денис": "https://www.twitch.tv/marixyana__i",
+          "Роман": "https://www.twitch.tv/corpuskulyar",
 }
 # -----------------------------------------------------------------------------
 
@@ -39,6 +50,25 @@ def fetch_csv():
     if raw.lstrip().lower().startswith(("<!doctype", "<html")):
         raise SystemExit("Got a web page instead of CSV: is the sheet shared as 'anyone with the link can view'?")
     return list(csv.reader(io.StringIO(raw)))
+
+
+def twitch_url(v):
+    """Accept a login ("somenick", "@somenick") or a full http(s) URL; anything else becomes a twitch.tv link."""
+    v = v.strip()
+    if not v:
+        return ""
+    if v.startswith(("http://", "https://")):
+        return v
+    return "https://www.twitch.tv/" + quote(v.lstrip("@"), safe="")
+
+
+def escape_players(players):
+    """HTML-escape every text value that came from the sheet."""
+    for p in players:
+        for k in ("id", "name", "twitch"):
+            p[k] = html.escape(p[k])
+        for r in p["rows"]:
+            r["seg"] = html.escape(r["seg"])
 
 
 def parse_blocks(rows):
@@ -62,7 +92,7 @@ def parse_blocks(rows):
                     })
                 name = row[c].strip()
                 players.append({"id": re.sub(r"\s+", "_", name), "name": name,
-                                "twitch": TWITCH.get(name, ""), "rows": items})
+                                "twitch": twitch_url(TWITCH.get(name, "")), "rows": items})
     return players
 
 
@@ -86,13 +116,14 @@ def build(players):
         shutil.rmtree(DIST)
     DIST.mkdir()
     attach_avatars(players)
+    escape_players(players)
     players.sort(key=lambda p: -sum(r["done"] for r in p["rows"]))  # most finished first, ties keep sheet order
     payload = json.dumps(players, ensure_ascii=False).replace("</", "<\\/")
-    html = TEMPLATE.read_text(encoding="utf-8")
-    html = (html.replace("__PLAYERS__", payload)
+    page = TEMPLATE.read_text(encoding="utf-8")
+    page = (page.replace("__PLAYERS__", payload)
                 .replace("__TITLE__", TITLE)
                 .replace("__UPDATED__", datetime.now().strftime("%d.%m.%Y %H:%M")))
-    (DIST / "index.html").write_text(html, encoding="utf-8")
+    (DIST / "index.html").write_text(page, encoding="utf-8")
 
 
 def data_hash(players):
